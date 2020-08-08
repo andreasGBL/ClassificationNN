@@ -1,6 +1,5 @@
 #include <cuda_runtime_api.h>
 #include <cublas_v2.h>
-#include <cuda_fp16.h>
 #include <iostream>
 #include <assert.h>
 #define TPB 1024
@@ -11,7 +10,6 @@ inline bool checkCudaError(cudaError_t code, const char* file, int line)
 	if (code != cudaSuccess)
 	{
 		std::cout << "Error on CUDA call: "<< cudaGetErrorString(code)<<" "<< " " << file<<" " <<line << std::endl;
-		assert(false);
 		return false;
 	}
 	return true;
@@ -22,11 +20,11 @@ inline bool checkCublasError(cublasStatus_t code, const char* file, int line)
 	if (code != CUBLAS_STATUS_SUCCESS)
 	{
 		std::cout << "Error on CUBLAS call: " << code << " " << " " << file << " " << line << std::endl;
-		assert(false);
 		return false;
 	}
 	return true;
 }
+
 template<typename T>
 inline void deviceToHost(T* destHost, const T* srcDev, size_t n) { CUDACALL(cudaMemcpy((void*)destHost, (void*)srcDev, sizeof(T) * n, cudaMemcpyDeviceToHost)); }
 template<typename T>
@@ -34,8 +32,6 @@ inline void hostToDevice(T* destDev, const T* srcHost, size_t n) { CUDACALL(cuda
 
 #define INSTANTIATE_D2H(Type) template void deviceToHost<Type>(Type*, const Type*, size_t);
 #define INSTANTIATE_H2D(Type) template void hostToDevice<Type>(Type*, const Type*, size_t);
-INSTANTIATE_D2H(half);
-INSTANTIATE_H2D(half);
 INSTANTIATE_D2H(float);
 INSTANTIATE_H2D(float);
 INSTANTIATE_D2H(double);

@@ -15,7 +15,7 @@ const size_t minibatchSize = 100;
 const size_t minibatchIterations = 100000;
 const size_t classes = 10;
 const f_t negative_learn_rate = -0.05f;
-const f_t constants[] = { (f_t)(float)minibatchSize, negative_learn_rate, (f_t)(float)minibatchIterations};
+const f_t constants[] = { (f_t)minibatchSize, negative_learn_rate, (f_t)minibatchIterations};
 std::mt19937 gen(1);
 std::uniform_int_distribution<int> distrib(0, (int)trainDataSize - 1);
 
@@ -339,11 +339,11 @@ void readIntoVector(std::string filename, std::vector<f_t>& vec) {
 	if (file.is_open()) {
 		string line;
 		while (getline(file, line)) {			
-			float a = 0;
+			f_t a = 0;
 			for (int i = 0; i < line.size(); i++) {
 				char c[1] = { line[i] };
-				a = (float) atoi(c);
-				vec[idx] = (f_t)a;
+				a = (f_t) atoi(c);
+				vec[idx] = a;
 				idx++;
 			}
 			

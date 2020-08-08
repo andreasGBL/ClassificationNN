@@ -287,21 +287,6 @@ struct multImpl<double> {
 		CUBLASCALL(cublasDgemm(CudaMatrix<double>::handle, ta, tb, m, n, k, &alpha, A.getData(), A.numRows(), B.getData(), B.numRows(), &beta, Result.getData(), Result.numRows()));
 	}
 };
-template<>
-struct multImpl<half> {
-	static void apply(CudaMatrix<half>& A, CudaMatrix<half>& B, CudaMatrix<half>& Result, bool transposeA, bool transposeB) {
-		half alpha = 1.0;
-		half beta = 0.0;
-		cublasOperation_t ta = transposeA ? CUBLAS_OP_T : CUBLAS_OP_N;
-		cublasOperation_t tb = transposeB ? CUBLAS_OP_T : CUBLAS_OP_N;
-		//mxn = mxk * kxn
-		int m = (int)Result.numRows();
-		int n = (int)Result.numCols();
-		int k = transposeA ? (int)A.numRows() : (int)A.numCols();
-		CUBLASCALL(cublasHgemm(CudaMatrix<half>::handle, ta, tb, m, n, k, &alpha, A.getData(), A.numRows(), B.getData(), B.numRows(), &beta, Result.getData(), Result.numRows()));
-	}
-};
-
 
 
 template<typename Real>
