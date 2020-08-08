@@ -270,7 +270,7 @@ struct multImpl<float> {
 		int m = (int)Result.numRows();
 		int n = (int)Result.numCols();
 		int k = transposeA ? (int)A.numRows() : (int) A.numCols();
-		CUBLASCALL(cublasSgemm_v2(CudaMatrix<float>::handle, ta, tb, m, n, k, &alpha, A.getData(), A.numRows(), B.getData(), B.numRows(), &beta, Result.getData(), Result.numRows()));
+		CUBLASCALL(cublasSgemm(CudaMatrix<float>::handle, ta, tb, m, n, k, &alpha, A.getData(), A.numRows(), B.getData(), B.numRows(), &beta, Result.getData(), Result.numRows()));
 	}
 };
 template<>
@@ -284,7 +284,7 @@ struct multImpl<double> {
 		int m = (int)Result.numRows();
 		int n = (int)Result.numCols();
 		int k = transposeA ? (int)A.numRows() : (int)A.numCols();
-		CUBLASCALL(cublasDgemm_v2(CudaMatrix<double>::handle, ta, tb, m, n, k, &alpha, A.getData(), A.numRows(), B.getData(), B.numRows(), &beta, Result.getData(), Result.numRows()));
+		CUBLASCALL(cublasDgemm(CudaMatrix<double>::handle, ta, tb, m, n, k, &alpha, A.getData(), A.numRows(), B.getData(), B.numRows(), &beta, Result.getData(), Result.numRows()));
 	}
 };
 template<>
