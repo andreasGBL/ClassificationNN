@@ -11,8 +11,6 @@ void loadData();
 void readIntoVector(std::string filename, std::vector<f_t>& vec);
 void forwardPropagation(CudaVector<f_t>& input, CudaVector<f_t>& output);
 void backwardPropagation(CudaVector<f_t>& output, CudaVector<f_t>& ExpectedOutput);
-void forwardPropagation2(CudaVector<f_t>& input, CudaVector<f_t>& output);
-void backwardPropagation2(CudaVector<f_t>& output, CudaVector<f_t>& ExpectedOutput);
 void calculateTestsetError(size_t samples);
 void train();
 void trainMinibatch(std::vector<CudaVector<f_t>>& inputs, std::vector<CudaVector<f_t>>& expectedOutputs);

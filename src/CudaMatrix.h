@@ -5,7 +5,7 @@ template<typename Real>
 class CudaVector;
 
 /**
-Col_Major Cuda Matrix
+Col_Major Cuda Matrix (Wrapper Class for cuBLAS)
 */
 template<typename Real>
 class CudaMatrix 
@@ -64,7 +64,9 @@ protected:
 	bool checkDims(CudaMatrix<Real>& B, CudaMatrix<Real>& C);
 	bool checkDimsMult(CudaMatrix<Real>& B, CudaMatrix<Real>& C, bool transA = false, bool transB = false);
 };
-
+/**
+* Cuda Vector Class (Cuda Matrix with one Column)
+*/
 template<typename Real>
 class CudaVector : public CudaMatrix<Real> {
 public:
