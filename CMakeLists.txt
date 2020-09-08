@@ -38,7 +38,7 @@ target_link_libraries(ClassificationNN MLChart)
 
 
 set(DATA_DIR ${CMAKE_SOURCE_DIR}/data)
-configure_file(${DATA_DIR}/mnist_train_in_60000.txt ./data/mnist_train_in_60000.txt COPYONLY)
-configure_file(${DATA_DIR}/mnist_train_out_60000.txt ./data/mnist_train_out_60000.txt COPYONLY)
+configure_file(${DATA_DIR}/mnist_train_in_50000.txt ./data/mnist_train_in_50000.txt COPYONLY)
+configure_file(${DATA_DIR}/mnist_train_out_50000.txt ./data/mnist_train_out_50000.txt COPYONLY)
 configure_file(${DATA_DIR}/mnist_test_in_10000.txt ./data/mnist_test_in_10000.txt COPYONLY)
 configure_file(${DATA_DIR}/mnist_test_out_10000.txt ./data/mnist_test_out_10000.txt COPYONLY)
