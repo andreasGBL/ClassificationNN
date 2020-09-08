@@ -17,13 +17,13 @@ MLChart::MLChart(QWidget * parent)
     this->show();
     QtCharts::QValueAxis * axisX = new QtCharts::QValueAxis();
     QtCharts::QValueAxis * axisY = new QtCharts::QValueAxis();
-    int ticks = 25;
+    int ticks = 30;
     axisX->setRange(1.0f, (float) ticks);
     axisY->setRange(0.0f, (float) ticks - 1);
     axes.push_back(axisX);
     axes.push_back(axisY);
-    axisX->setTickCount(20);
-    axisY->setTickCount(20);
+    axisX->setTickCount(ticks);
+    axisY->setTickCount(ticks);
     axisY->setTitleText("Value");
     axisX->setTitleText("Iteration");
     axisX->setLabelFormat("%i");
@@ -118,7 +118,7 @@ void MLChart::updateAxes()
     auto && axisX = axes[0];
     auto && axisY = axes[1];
     axisX->setRange(std::min(1.0f, minX), std::max((float) axes[0]->tickCount(), maxX));
-    axisY->setRange(std::min(0.0f, minY), maxY);
+    axisY->setRange(std::min(0.0f, minY), std::min(1.0f, maxY));
     chv->chart()->update();
     chv->update();
 }

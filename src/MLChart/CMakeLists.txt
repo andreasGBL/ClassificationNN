@@ -19,4 +19,4 @@ add_library(${PROJECT_NAME}
     MLChart.h
     MLChart.ui)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC Qt::Core Qt::Gui Qt::Widgets Qt::Charts)
+target_link_libraries(${PROJECT_NAME} PUBLIC Qt::Widgets Qt::Charts)

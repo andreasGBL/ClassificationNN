@@ -9,18 +9,18 @@
 #include <thread>
 
 
-const size_t nodesPerLayer[] = { 28*28, 200, 20, 10 };
+const size_t nodesPerLayer[] = { 28*28, 400, 40, 10 };
 
 const size_t layers = sizeof(nodesPerLayer) / sizeof(nodesPerLayer[0]);
 const size_t inputSize = nodesPerLayer[0], outputSize = nodesPerLayer[layers - 1];
 
 const size_t classes = outputSize;
 
-const size_t testDataSize = 10000, trainDataSize = 60000;
+const size_t testDataSize = 10000, trainDataSize = 50000;
 
 
 const size_t minibatchSize = 100;
-const size_t minibatchIterations = 20000;
+const size_t minibatchIterations = 100000;
 
 const f_t negative_learn_rate = -0.005f;
 const f_t constants[] = { (f_t)minibatchSize, negative_learn_rate, (f_t)minibatchIterations, -negative_learn_rate};
@@ -376,7 +376,7 @@ void loadData() {
 
 	size_t n = trainInMat.numElems();
 	vector<f_t> data(n);
-	readIntoVector("./data/mnist_train_in_60000.txt", data);
+	readIntoVector("./data/mnist_train_in_50000.txt", data);
 	hostToDevice<f_t>(trainInMat.getData(), &data[0], n);
 
 	n = testInMat.numElems();
@@ -386,7 +386,7 @@ void loadData() {
 
 	n = trainOutClasses.numElems();
 	trainClasses = vector<f_t>(n);
-	readIntoVector("./data/mnist_train_out_60000.txt", trainClasses);
+	readIntoVector("./data/mnist_train_out_50000.txt", trainClasses);
 	hostToDevice<f_t>(trainOutClasses.getData(), &trainClasses[0], n);
 
 	n = trainOutMat.numElems();
@@ -447,13 +447,12 @@ void readIntoVector(std::string filename, std::vector<f_t>& vec) {
 		string line;
 		while (getline(file, line)) {			
 			f_t a = 0;
-			for (int i = 0; i < line.size(); i++) {
-				char c[1] = { line[i] };
-				a = (f_t) atoi(c);
-				vec[idx] = a;
+			std::stringstream ss(line);
+			std::string elem;
+			while (std::getline(ss, elem, ',')) {
+				vec[idx] = (f_t) stof(elem);
 				idx++;
-			}
-			
+			}			
 		}
 		file.close();
 	}
