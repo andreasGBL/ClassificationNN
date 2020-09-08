@@ -1,56 +1,76 @@
 #include "Classification.h"
 #include <algorithm>
+#include <numeric>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include "Timer.h"
 #include <random>
+#include <thread>
 
-const size_t nodesPerLayer[] = { 784, 40, 20, 10 };
+
+const size_t nodesPerLayer[] = { 28*28, 200, 20, 10 };
 
 const size_t layers = sizeof(nodesPerLayer) / sizeof(nodesPerLayer[0]);
 const size_t inputSize = nodesPerLayer[0], outputSize = nodesPerLayer[layers - 1];
+
+const size_t classes = outputSize;
+
 const size_t testDataSize = 10000, trainDataSize = 60000;
+
+
 const size_t minibatchSize = 100;
-const size_t minibatchIterations = 100000;
-const size_t classes = 10;
-const f_t negative_learn_rate = -0.05f;
-const f_t constants[] = { (f_t)minibatchSize, negative_learn_rate, (f_t)minibatchIterations};
+const size_t minibatchIterations = 20000;
+
+const f_t negative_learn_rate = -0.005f;
+const f_t constants[] = { (f_t)minibatchSize, negative_learn_rate, (f_t)minibatchIterations, -negative_learn_rate};
+struct constantIDX {
+	static const int minibatchSize = 0;
+	static const int negative_learn_rate = 1;
+	static const int minibatchIterations = 2;
+	static const int learn_rate = 3;
+};
 std::mt19937 gen(1);
 std::uniform_int_distribution<int> distrib(0, (int)trainDataSize - 1);
 
-const unsigned long long seed = 42;
+const unsigned long long seed = 420;
 
-std::vector<CudaMatrix<f_t>> weights, dw, mbw;
-std::vector<CudaVector<f_t>> biases, db, mbb, a, z, trainIn, trainOut, testIn, testOut;
+std::vector<CudaMatrix<f_t>> weights, gradW, minibatchGradW, lastMinibatchGradW, lastMinibatchStepW;
+std::vector<CudaVector<f_t>> biases, gradB, minibatchGradB, lastMinibatchGradB, lastMinibatchStepB, a, z, trainIn, trainOut, testIn, testOut;
 
 std::vector<f_t> testClasses, trainClasses;
 
 CudaMatrix<f_t> trainInMat, trainOutMat, testInMat, testOutMat, testOutTest;
 CudaVector<f_t> result;
-CudaVector<f_t> tempVector1, tempVector2;
+CudaVector<f_t> tempVector1, tempVector2, tempVariablesCG;
+CudaVector<f_t> tempMatrix1, tempMatrix2;
 CudaVector<f_t> constantsGPU, trainOutClasses, testOutClasses;
 
+void mainThread()
+{
+	size_t allocationSize = 0, tempAllocationSizeVector = 0, tempAllocationSizeMatrix = 0;
 
-int main() {
-	assert(layers >= 2);
+	calcAllocationSize(allocationSize, tempAllocationSizeVector, tempAllocationSizeMatrix);
 
-	size_t allocationSize = 0;
-	size_t tempAllocationSizeVector = 0;
 
-	calcAllocationSize(allocationSize, tempAllocationSizeVector);
-	
-	
 	Timer t("Allocation", true);
 	CudaVector<f_t> All(allocationSize);
-	std::cout << "Allocating " << ((allocationSize+ 2* tempAllocationSizeVector) * sizeof(f_t) / 1024.0 / 1024.0) << " MB GPU memory."<<std::endl;
+	std::cout << "Allocating " << ((allocationSize + 2 * tempAllocationSizeVector) * sizeof(f_t) / 1024.0 / 1024.0) << " MB GPU memory." << std::endl;
 	constantsGPU.initVector(sizeof(constants) / sizeof(constants[0]));
 	hostToDevice<f_t>(constantsGPU.getData(), &constants[0], constantsGPU.numElems());
-	tempVector1.initVector(tempAllocationSizeVector), tempVector2.initVector(tempAllocationSizeVector);
-	All.fill((f_t) 0.0);
-	tempVector1.fill((f_t) 0.0);
-	tempVector2.fill((f_t) 0.0);
-	
+	tempVector1.initVector(tempAllocationSizeVector);
+	tempVector2.initVector(tempAllocationSizeVector);
+	tempMatrix1.initVector(tempAllocationSizeMatrix);
+	tempMatrix2.initVector(tempAllocationSizeMatrix);
+	tempVariablesCG.initVector(5);
+
+	All.fill((f_t)0.0);
+	tempVector1.fill((f_t)0.0);
+	tempVector2.fill((f_t)0.0);
+	tempMatrix1.fill((f_t)0.0);
+	tempMatrix2.fill((f_t)0.0);
+	tempVariablesCG.fill((f_t)0.0);
+
 	alloc(All, allocationSize);
 	cudaDeviceSynchronize();
 	t.startNew("Loading Data", true);
@@ -65,14 +85,29 @@ int main() {
 	}
 	cudaDeviceSynchronize();
 	t.startNew("Training", true);
+	/*while (true) {
+		if (chart != nullptr && chart->initialized())
+			break;
+	}*/
 	train();
 	cudaDeviceSynchronize();
 	t.stop();
 	CudaMatrix<f_t>::freeCublasHandle();
+}
+int main(int argc, char* argv[]) {
+	assert(layers >= 2);
+	chart = new MLChartFrame(argc, argv);
+	mainThread();
+	std::cout << "Waiting for exit..." << std::endl;
+	chart->keepOpenUntilExit();
+	delete chart;
 	return 0;
 }
 
-void calculateTestsetError(size_t samples) {
+std::tuple<double, double> calculateTestsetError(size_t samples) {
+	if (samples == 0)
+		samples = testDataSize;
+	samples = std::min(samples, testDataSize);
 	Timer t("Calculate testset error");
 	for (size_t i = 0; i < samples; i++) {
 		CudaVector<f_t> out = testOutTest.getColumn(i);
@@ -109,27 +144,55 @@ void calculateTestsetError(size_t samples) {
 	double classificationRate = 1.0 - misclassificationRate;
 	double meanCrossEntropy = crossEntropy / ((double)samples);
 
-	std::cout << "Miscl. rate: " << misclassificationRate << " mean Cross Entropy: " << meanCrossEntropy << std::endl;
+	std::cout << "Miscl. rate: " << misclassificationRate << " mean Cross Entropy: " << meanCrossEntropy;
+	return std::tuple<double, double>(misclassificationRate, meanCrossEntropy);
 }
 
 
 void train() {
-	
 	std::vector <CudaVector<f_t>> trainInputVectors(minibatchSize);
 	std::vector <CudaVector<f_t>> trainOutputVectors(minibatchSize);
-	for (int i = 0; i <= minibatchIterations; i++) {
+	std::vector<double> movingAverage;
+	std::vector<double> x;
+	for (int i = 1; i <= minibatchIterations; i++) {
 		
 		for (int m = 0; m < minibatchSize; m++) {
 			int next = distrib(gen);
 			trainInputVectors[m] = trainIn[next];
 			trainOutputVectors[m] = trainOut[next];
 		}
-		trainMinibatch(trainInputVectors, trainOutputVectors);
-		if (i % 50 == 0) {
+		trainMinibatch(trainInputVectors, trainOutputVectors, i, false);
+		if (i < 20 || i < 200 && i % 10 == 0 || i % 20 == 0 && i < 500 || i % 50 == 0 && i < 1000 || i % 100 == 0 && i < 5000 || i % 500 == 0) {
 			std::cout << "MB iteration " << i<< " ";
-			calculateTestsetError(10000);
+
+			auto && testSetError = calculateTestsetError(0);
+
+			double missClass = std::get<0>(testSetError);
+			double medianCrossEntropy = std::get<1>(testSetError);
+
+			movingAverage.push_back(missClass);
+			if (movingAverage.size() > 10)
+				movingAverage.erase(movingAverage.begin());
+			double a = std::accumulate(movingAverage.begin(), movingAverage.end(), 0.0);
+			double mAMCR = a / ((double)movingAverage.size());
+			std::cout << " Moving Average: " << mAMCR << std::endl;
+			x.push_back((double)i);
+			std::vector<std::tuple<float, float>> chartPoint;
+			
+			std::string names[3] = { "Missclassification rate", "Moving average missclassification rate", "Median Cross Entropy"};
+
+			chartPoint.push_back(std::tuple<float, float>((float)i, (float)missClass));
+			chart->appendSeries(chartPoint, names[0]);
+			
+			chartPoint.clear();
+
+			chartPoint.push_back(std::tuple<float, float>((float)i, (float)medianCrossEntropy));
+			chart->appendSeries(chartPoint, names[2]);
+			
+			chart->update();
 		}
 	}
+
 }
 
 void forwardPropagation(CudaVector<f_t>& input, CudaVector<f_t>& output) {
@@ -149,50 +212,88 @@ void forwardPropagation(CudaVector<f_t>& input, CudaVector<f_t>& output) {
 
 void backwardPropagation(CudaVector<f_t>& output, CudaVector<f_t>& expectedOutput) {
 	int i = (int)layers - 2;
-	output.sub(expectedOutput, db[i]);
-	db[i].mult(a[i], dw[i], false, true);
+	output.sub(expectedOutput, gradB[i]);
+	gradB[i].mult(a[i], gradW[i], false, true);
 	for (i--; i >= 0; i--) {
-		auto temp1 = tempVector1.getSubvector(0, db[i].numElems() - 1);
-		auto temp2 = tempVector2.getSubvector(0, db[i].numElems() - 1);
-		weights[i + 1].mult(db[i + 1], temp1, true);
+		auto temp1 = tempVector1.getSubvector(0, gradB[i].numElems() - 1);
+		auto temp2 = tempVector2.getSubvector(0, gradB[i].numElems() - 1);
+		weights[i + 1].mult(gradB[i + 1], temp1, true);
 		z[i + 1].sigmoidD(temp2);
-		temp1.multElements(temp2, db[i]);
-		db[i].mult(a[i], dw[i], false, true);
+		temp1.multElements(temp2, gradB[i]);
+		gradB[i].mult(a[i], gradW[i], false, true);
 	}
 }
 
-void trainMinibatch(std::vector<CudaVector<f_t>>& inputs, std::vector<CudaVector<f_t>>& expectedOutputs) {
+void trainMinibatch(std::vector<CudaVector<f_t>>& inputs, std::vector<CudaVector<f_t>>& expectedOutputs, int iteration, bool useCG) {
 	Timer t("Minibatch Iteration" 
 #ifdef _DEBUG 
 		,true
 #endif
 );
+	chart->update();
 	assert(minibatchSize == inputs.size() && minibatchSize == expectedOutputs.size());
 	for (int l = 0; l < layers - 1; l++) {
-		mbb[l].fill((f_t) 0.0);
-		mbw[l].fill((f_t) 0.0);
+		lastMinibatchGradB[l].copyFrom(minibatchGradB[l]);
+		lastMinibatchGradW[l].copyFrom(minibatchGradW[l]);
+		minibatchGradB[l].fill((f_t) 0.0);
+		minibatchGradW[l].fill((f_t) 0.0);
 	}
 	for (int i = 0; i < minibatchSize; i++) {
 		forwardPropagation(inputs[i], result);
 		backwardPropagation(result, expectedOutputs[i]);
 		for (int l = 0; l < layers - 1; l++) {
-			db[l].add(mbb[l], mbb[l]);
-			dw[l].add(mbw[l], mbw[l]);
+			gradB[l].add(minibatchGradB[l], minibatchGradB[l]);
+			gradW[l].add(minibatchGradW[l], minibatchGradW[l]);
 		}
 	}
 	for (int l = 0; l < layers - 1; l++) {
-		mbb[l].axpy(biases[l], biases[l], constantsGPU.getData() + 1);
-		mbw[l].axpy(weights[l], weights[l], constantsGPU.getData() + 1);
+		auto gradientDescent = [&]() {
+			minibatchGradB[l].axpy(biases[l], biases[l], constantsGPU.getData() + constantIDX::negative_learn_rate);
+			minibatchGradW[l].axpy(weights[l], weights[l], constantsGPU.getData() + constantIDX::negative_learn_rate);
+		};
+		auto conjugateGradient = [&]() {
+			minibatchGradB[l].dot(minibatchGradB[l], tempVector1, tempVector2, tempVariablesCG.getData());
+			lastMinibatchGradB[l].dot(lastMinibatchGradB[l], tempVector1, tempVector2, tempVariablesCG.getData() + 1);
+			divide<f_t>(tempVariablesCG.getData(), tempVariablesCG.getData() + 1, tempVariablesCG.getData() + 2);
+			lastMinibatchStepB[l].axpy(minibatchGradB[l], lastMinibatchStepB[l], tempVariablesCG.getData() + 2);
+
+
+			minibatchGradW[l].dot(minibatchGradW[l], tempMatrix1, tempMatrix2, tempVariablesCG.getData());
+			lastMinibatchGradW[l].dot(lastMinibatchGradW[l], tempMatrix1, tempMatrix2, tempVariablesCG.getData() + 1);
+			divide<f_t>(tempVariablesCG.getData(), tempVariablesCG.getData() + 1, tempVariablesCG.getData() + 2);
+			lastMinibatchStepW[l].axpy(minibatchGradW[l], lastMinibatchStepW[l], tempVariablesCG.getData() + 2);
+
+			lastMinibatchStepB[l].axpy(biases[l], biases[l], constantsGPU.getData() + constantIDX::negative_learn_rate);
+			lastMinibatchStepW[l].axpy(weights[l], weights[l], constantsGPU.getData() + constantIDX::negative_learn_rate);
+		};
+		if (useCG) {
+			if (iteration == 0) {
+				gradientDescent();
+				lastMinibatchStepB[l].copyFrom(minibatchGradB[l]);
+				lastMinibatchStepW[l].copyFrom(minibatchGradW[l]);
+			}
+			else {
+				conjugateGradient();
+			}
+		}
+		else {
+			gradientDescent();
+		}
 	}
 	
 }
 
-void calcAllocationSize(size_t& allocationSize, size_t& tempAllocationSizeVector) {
+void calcAllocationSize(size_t& allocationSize, size_t& tempAllocationSizeVector, size_t& tempAllocationSizeMatrix) {
 	tempAllocationSizeVector = *std::max_element(&nodesPerLayer[0], &nodesPerLayer[0] + layers - 1);
+	std::vector<f_t> connectionsPerLayer(layers - 2);
+	for (size_t i = 0; i < layers - 2; i++) {
+		connectionsPerLayer[i] = nodesPerLayer[i] * nodesPerLayer[i + 1];
+	}
+	tempAllocationSizeMatrix = *std::max_element(&connectionsPerLayer[0], &connectionsPerLayer[0] + layers - 2);
 	for (size_t i = 0; i < layers; i++) {
 		allocationSize += 2 * nodesPerLayer[i]; //a, z
 		if (i < layers - 1) {
-			allocationSize += 3 * (nodesPerLayer[i] * nodesPerLayer[i + 1] + nodesPerLayer[i + 1]); // w, dw, mbw, b, db, mbb
+			allocationSize += 5 * (nodesPerLayer[i] * nodesPerLayer[i + 1] + nodesPerLayer[i + 1]); // w, gradW, minibatchGradW, lastMinibatchGradW, lastMinibatchStepW, b, gradB, minibatchGradB, lastMinibatchGradB, lastMinibatchStepB
 		}
 	}
 	allocationSize += outputSize; // result
@@ -208,15 +309,23 @@ void alloc(CudaMatrix<f_t>& All, size_t allocationSize) {
 		if (i < layers - 1) {
 			weights.push_back(CudaMatrix<f_t>(pos, rows, cols));
 			pos += mElems;
-			dw.push_back(CudaMatrix<f_t>(pos, rows, cols));
+			gradW.push_back(CudaMatrix<f_t>(pos, rows, cols));
 			pos += mElems;
-			mbw.push_back(CudaMatrix<f_t>(pos, rows, cols));
+			minibatchGradW.push_back(CudaMatrix<f_t>(pos, rows, cols));
+			pos += mElems;
+			lastMinibatchStepW.push_back(CudaMatrix<f_t>(pos, rows, cols));
+			pos += mElems;
+			lastMinibatchGradW.push_back(CudaMatrix<f_t>(pos, rows, cols));
 			pos += mElems;
 			biases.push_back(CudaVector<f_t>(pos, rows));
 			pos += rows;
-			db.push_back(CudaVector<f_t>(pos, rows));
+			gradB.push_back(CudaVector<f_t>(pos, rows));
 			pos += rows;
-			mbb.push_back(CudaVector<f_t>(pos, rows));
+			minibatchGradB.push_back(CudaVector<f_t>(pos, rows));
+			pos += rows;
+			lastMinibatchGradB.push_back(CudaVector<f_t>(pos, rows));
+			pos += rows;
+			lastMinibatchStepB.push_back(CudaVector<f_t>(pos, rows));
 			pos += rows;
 		}
 		a.push_back(CudaVector<f_t>(pos, cols));
@@ -300,7 +409,7 @@ void classesToOutputs(std::vector<f_t>& classVec, std::vector<f_t>& outputs) {
 	for (int i = 0; i < classVec.size(); i++) {
 		f_t c = classVec[i];
 		for (int j = 0; j < classes; j++) {
-			outputs[10 * i + j] = c == j ? (f_t) 1.0 : (f_t) 0.0;
+			outputs[classes * i + j] = c == j ? (f_t) 1.0 : (f_t) 0.0;
 		}
 	}
 }
@@ -321,14 +430,12 @@ void printAll()
 			std::cout << "b " << l << std::endl;
 			biases[l].print();
 			std::cout << "dw " << l << std::endl;
-			dw[l].print();
+			gradW[l].print();
 			std::cout << "db " << l << std::endl;
-			db[l].print();
+			gradB[l].print();
 		}
 	}
 }
-
-
 
 void readIntoVector(std::string filename, std::vector<f_t>& vec) {
 	using namespace std;
@@ -351,6 +458,7 @@ void readIntoVector(std::string filename, std::vector<f_t>& vec) {
 		file.close();
 	}
 	else {
-		std::cout << "Couldn't open file!" << std::endl;
+		std::cerr << "Couldn't open file! ("<<filename<<")" << std::endl;
+		exit(1);
 	}
 }
