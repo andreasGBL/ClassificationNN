@@ -9,7 +9,7 @@
 #include <thread>
 
 
-const size_t nodesPerLayer[] = { 28*28, 400, 40, 10 };
+const size_t nodesPerLayer[] = { 28*28, 500, 20, 10 };
 
 const size_t layers = sizeof(nodesPerLayer) / sizeof(nodesPerLayer[0]);
 const size_t inputSize = nodesPerLayer[0], outputSize = nodesPerLayer[layers - 1];
