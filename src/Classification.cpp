@@ -111,7 +111,7 @@ std::tuple<double, double> calculateTestsetError(size_t samples) {
 	Timer t("Calculate testset error");
 	for (size_t i = 0; i < samples; i++) {
 		CudaVector<f_t> out = testOutTest.getColumn(i);
-		forwardPropagation(testIn[i], out);
+		forwardPropagationClassification(testIn[i], out);
 	}
 	std::vector<f_t> results(testOutTest.numElems(), (f_t) 0.0);
 	deviceToHost<f_t>(&results[0], testOutTest.getData(), testOutTest.numElems());
@@ -195,7 +195,7 @@ void train() {
 
 }
 
-void forwardPropagation(CudaVector<f_t>& input, CudaVector<f_t>& output) {
+void forwardPropagationClassification(CudaVector<f_t>& input, CudaVector<f_t>& output) {
 	z[0].copyFrom(input);
 	a[0].copyFrom(input);
 	for (int i = 1; i < layers; i++) {
@@ -210,7 +210,40 @@ void forwardPropagation(CudaVector<f_t>& input, CudaVector<f_t>& output) {
 	}
 }
 
-void backwardPropagation(CudaVector<f_t>& output, CudaVector<f_t>& expectedOutput) {
+void backwardPropagationClassification(CudaVector<f_t>& output, CudaVector<f_t>& expectedOutput) {
+	int i = (int)layers - 2;
+	output.sub(expectedOutput, gradB[i]);
+	gradB[i].mult(a[i], gradW[i], false, true);
+	for (i--; i >= 0; i--) {
+		auto temp1 = tempVector1.getSubvector(0, gradB[i].numElems() - 1);
+		auto temp2 = tempVector2.getSubvector(0, gradB[i].numElems() - 1);
+		weights[i + 1].mult(gradB[i + 1], temp1, true);
+		z[i + 1].sigmoidD(temp2);
+		temp1.multElements(temp2, gradB[i]);
+		gradB[i].mult(a[i], gradW[i], false, true);
+	}
+}
+
+void forwardPropagationRegression(CudaVector<f_t> & input, CudaVector<f_t> & output)
+{
+	z[0].copyFrom(input);
+	a[0].copyFrom(input);
+	for (int i = 1; i < layers; i++) {
+		weights[i - 1].mult(a[i - 1], z[i]);
+		z[i].add(biases[i - 1], z[i]);
+		if (i < layers - 1) {
+			z[i].sigmoid(a[i]);
+		}
+		else {
+			a[i].copyFrom(z[i]);
+			//z[i].softMax(a[i], tempVector1);
+			output.copyFrom(a[i]);
+		}
+	}
+}
+
+void backwardPropagationRegression(CudaVector<f_t> & output, CudaVector<f_t> & expectedOutput)
+{
 	int i = (int)layers - 2;
 	output.sub(expectedOutput, gradB[i]);
 	gradB[i].mult(a[i], gradW[i], false, true);
@@ -239,8 +272,8 @@ void trainMinibatch(std::vector<CudaVector<f_t>>& inputs, std::vector<CudaVector
 		minibatchGradW[l].fill((f_t) 0.0);
 	}
 	for (int i = 0; i < minibatchSize; i++) {
-		forwardPropagation(inputs[i], result);
-		backwardPropagation(result, expectedOutputs[i]);
+		forwardPropagationClassification(inputs[i], result);
+		backwardPropagationClassification(result, expectedOutputs[i]);
 		for (int l = 0; l < layers - 1; l++) {
 			gradB[l].add(minibatchGradB[l], minibatchGradB[l]);
 			gradW[l].add(minibatchGradW[l], minibatchGradW[l]);
