@@ -37,8 +37,16 @@ The network was performing up to a missclassification rate of about 2.2% which i
 
 On a GTX 1070 one forward propagation step takes about 0.1 ms while one minibatch step (100 forward and 100 backward propagations) takes around 10 ms.
 
+
+Neural network performance after 1.000 minibatch iterations:
 ![1.000 Iterations](./images/1k_iteration.jpg "Neural network performance after 1.000 minibatch iterations.")
+
+
+Neural network performance after 10.000 minibatch iterations:
 ![10.000 Iterations](./images/10k_iteration.jpg "Neural network performance after 10.000 minibatch iterations.")
+
+
+Neural network performance after 100.000 minibatch iterations:
 ![100.000 Iterations](./images/100k_iteration.jpg "Neural network performance after 100.000 minibatch iterations.")
 
 ## License
