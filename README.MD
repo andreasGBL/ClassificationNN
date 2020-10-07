@@ -52,4 +52,4 @@ Neural network performance after 100.000 minibatch iterations:
 ## License
 © 2020 [andreasGBL](https://github.com/andreasGBL).
 
-Licensed under the [GPLv3](./LICENSE.md).
+Licensed under the [GPLv3](./LICENSE.MD).
