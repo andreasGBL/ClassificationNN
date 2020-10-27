@@ -33,7 +33,7 @@ A cmake script is included in the project. Cuda 11 is recommended since cub is a
 
 ## Results
 
-The network was performing up to a missclassification rate of about 2.2% which is pretty reasonable. Similar implementations (see https://en.wikipedia.org/wiki/MNIST_database#Classifiers), were performing up to a missclassification rate of 1.6%. A small amount of the difference can be explained by the fact that 10.000 images weren't used in this project, but even with those the 2%-mark is almost never crossed. The given configuration of Wikipedia with a 784-800-10 network is actually performing worse with this implementation, but all in all the implementation is reasonably good and getting close to the best possible result.
+The network was performing up to a missclassification rate of about 2.2% which is pretty reasonable. Similar implementations (see https://en.wikipedia.org/wiki/MNIST_database#Classifiers) were performing up to a missclassification rate of 1.6%. A small amount of the difference can be explained by the fact that only 50.000 / 60.000 images were used for training in this project, but even with the last 10.000 images the 2%-mark is almost never crossed. The given configuration of Wikipedia with a 784-800-10 network is actually performing worse with this implementation, but all in all the implementation is reasonably good and getting close to the best possible result.
 
 On a GTX 1070 one forward propagation step takes about 0.1 ms while one minibatch step (100 forward and 100 backward propagations) takes around 10 ms.
 
@@ -50,6 +50,6 @@ Neural network performance after 100.000 minibatch iterations:
 ![100.000 Iterations](./images/100k_iteration.jpg "Neural network performance after 100.000 minibatch iterations.")
 
 ## License
-© 2020 [andreasGBL](https://github.com/andreasGBL).
+Copyright © 2020 [andreasGBL](https://github.com/andreasGBL).
 
 Licensed under the [GPLv3](./LICENSE.MD).
