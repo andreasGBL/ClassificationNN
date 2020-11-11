@@ -85,10 +85,6 @@ void mainThread()
 	}
 	cudaDeviceSynchronize();
 	t.startNew("Training", true);
-	/*while (true) {
-		if (chart != nullptr && chart->initialized())
-			break;
-	}*/
 	train();
 	cudaDeviceSynchronize();
 	t.stop();
@@ -96,11 +92,19 @@ void mainThread()
 }
 int main(int argc, char* argv[]) {
 	assert(layers >= 2);
-	chart = new MLChartFrame(argc, argv);
+
+#ifdef WITH_QT_CHARTS
+chart = new MLChartFrame(argc, argv);
+#endif // WITH_QT_CHARTS
+	
 	mainThread();
+
+#ifdef WITH_QT_CHARTS
 	std::cout << "Waiting for exit..." << std::endl;
 	chart->keepOpenUntilExit();
 	delete chart;
+#endif // WITH_QT_CHARTS
+	
 	return 0;
 }
 
@@ -182,14 +186,21 @@ void train() {
 			std::string names[3] = { "Missclassification rate", "Moving average missclassification rate", "Median Cross Entropy"};
 
 			chartPoint.push_back(std::tuple<float, float>((float)i, (float)missClass));
+#ifdef WITH_QT_CHARTS
 			chart->appendSeries(chartPoint, names[0]);
+#endif // WITH_QT_CHARTS
+			
 			
 			chartPoint.clear();
 
 			chartPoint.push_back(std::tuple<float, float>((float)i, (float)medianCrossEntropy));
+
+#ifdef WITH_QT_CHARTS
 			chart->appendSeries(chartPoint, names[2]);
-			
+
 			chart->update();
+#endif // WITH_QT_CHARTS
+			
 		}
 	}
 
@@ -223,14 +234,16 @@ void backwardPropagation(CudaVector<f_t>& output, CudaVector<f_t>& expectedOutpu
 		gradB[i].mult(a[i], gradW[i], false, true);
 	}
 }
-
 void trainMinibatch(std::vector<CudaVector<f_t>>& inputs, std::vector<CudaVector<f_t>>& expectedOutputs, int iteration, bool useCG) {
 	Timer t("Minibatch Iteration" 
-#ifdef _DEBUG 
+#if defined(_DEBUG) || defined(PRINT)
 		,true
 #endif
 );
+
+#ifdef WITH_QT_CHARTS
 	chart->update();
+#endif // WITH_QT_CHARTS
 	assert(minibatchSize == inputs.size() && minibatchSize == expectedOutputs.size());
 	for (int l = 0; l < layers - 1; l++) {
 		lastMinibatchGradB[l].copyFrom(minibatchGradB[l]);
@@ -280,7 +293,6 @@ void trainMinibatch(std::vector<CudaVector<f_t>>& inputs, std::vector<CudaVector
 			gradientDescent();
 		}
 	}
-	
 }
 
 void calcAllocationSize(size_t& allocationSize, size_t& tempAllocationSizeVector, size_t& tempAllocationSizeMatrix) {

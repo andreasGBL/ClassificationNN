@@ -3,10 +3,17 @@
 #include "Classification.cuh"
 #include <vector>
 #include <string>
+#ifdef WITH_QT_CHARTS
 #include "MLChart/MLChartFrame.h"
+#endif // WITH_QT_CHARTS
+
+
 
 typedef float f_t;
+#ifdef WITH_QT_CHARTS
 MLChartFrame * chart = nullptr;
+#endif // WITH_QT_CHARTS
+
 
 
 void alloc(CudaMatrix<f_t>& All, size_t allocationSize);
