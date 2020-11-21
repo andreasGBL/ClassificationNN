@@ -1,10 +1,10 @@
 #pragma once
 #include "CudaMatrix.h"
-#include "Classification.cuh"
+#include "CudaMath.cuh"
 #include <vector>
 #include <string>
 #ifdef WITH_QT_CHARTS
-#include "MLChart/MLChartFrame.h"
+#include "MLChartFrame.h"
 #endif // WITH_QT_CHARTS
 
 

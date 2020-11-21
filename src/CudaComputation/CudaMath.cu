@@ -1,4 +1,4 @@
-#include "Classification.cuh"
+#include "CudaMath.cuh"
 #include "CudaGlobal.cuh"
 
 
