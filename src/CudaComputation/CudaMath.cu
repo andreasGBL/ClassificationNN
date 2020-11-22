@@ -1,5 +1,6 @@
 #include "CudaMath.cuh"
 #include "CudaGlobal.cuh"
+#include <Templates.h>
 
 
 
@@ -22,14 +23,13 @@ template<typename Real>
 void divide(Real* a, Real* b, Real* result) {
 	divideKernel<Real> << <1, 1 >> > (a, b, result);
 }
-
-template void divide<float>(float*, float*, float*);
-template void divide<double>(double*, double*, double*);
+#define INSTANTIATE_DIVIDE(Real) template void divide<Real>(Real*, Real*, Real*);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_DIVIDE);
 
 template<typename Real>
 void mult(Real* a, Real* b, Real* result) {
 	multKernel<Real> << <1, 1 >> > (a, b, result);
 }
 
-template void mult<float>(float*, float*, float*);
-template void mult<double>(double*, double*, double*);
+#define INSTANTIATE_MULT(Real) template void mult<Real>(Real*, Real*, Real*);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_MULT);

@@ -1,7 +1,10 @@
+#pragma once
 #include <cuda_runtime_api.h>
 #include <cublas_v2.h>
 #include <iostream>
 #include <assert.h>
+#include <Templates.h>
+
 #define TPB 1024
 #define DIVRND(a,b) ((a+b-1)/b)
 #define CUDACALL(ans) checkCudaError((ans), __FILE__, __LINE__)
@@ -29,26 +32,11 @@ template<typename T>
 inline void deviceToHost(T* destHost, const T* srcDev, size_t n) { CUDACALL(cudaMemcpy((void*)destHost, (void*)srcDev, sizeof(T) * n, cudaMemcpyDeviceToHost)); }
 template<typename T>
 inline void hostToDevice(T* destDev, const T* srcHost, size_t n) { CUDACALL(cudaMemcpy((void*)destDev, (void*)srcHost, sizeof(T) * n, cudaMemcpyHostToDevice)); }
+template<typename T>
+inline void deviceToDevice(T * destDev, const T * srcDev, size_t n) { CUDACALL(cudaMemcpy((void *)destDev, (void *)srcDev, sizeof(T) * n, cudaMemcpyDeviceToDevice)); }
 
 #define INSTANTIATE_D2H(Type) template void deviceToHost<Type>(Type*, const Type*, size_t);
 #define INSTANTIATE_H2D(Type) template void hostToDevice<Type>(Type*, const Type*, size_t);
-INSTANTIATE_D2H(float);
-INSTANTIATE_H2D(float);
-INSTANTIATE_D2H(double);
-INSTANTIATE_H2D(double);
-INSTANTIATE_D2H(bool);
-INSTANTIATE_H2D(bool);
-INSTANTIATE_D2H(char);
-INSTANTIATE_H2D(char);
-INSTANTIATE_D2H(short);
-INSTANTIATE_H2D(short);
-INSTANTIATE_D2H(unsigned short);
-INSTANTIATE_H2D(unsigned short);
-INSTANTIATE_D2H(int);
-INSTANTIATE_H2D(int);
-INSTANTIATE_D2H(unsigned int);
-INSTANTIATE_H2D(unsigned int);
-INSTANTIATE_D2H(long long int);
-INSTANTIATE_H2D(long long int);
-INSTANTIATE_D2H(unsigned long long int);
-INSTANTIATE_H2D(unsigned long long int);
+#define INSTANTIATE_D2D(Type) template void deviceToDevice<Type>(Type*, const Type*, size_t);
+#define INSTANTIATE_MEMCPYS(Type) INSTANTIATE_D2H(Type) INSTANTIATE_H2D(Type) INSTANTIATE_D2D(Type) 
+EXECUTE_MACRO_FOR_ALL_TYPES(INSTANTIATE_MEMCPYS);

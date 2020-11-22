@@ -2,6 +2,7 @@
 #include "CudaMatrix.cuh"
 #include <curand.h>
 #include <curand_kernel.h>
+#include <Templates.h>
 
 
 template<typename Real>
@@ -304,70 +305,53 @@ void cudaSqrt(Real* a, Real* result, size_t n)
 
 
 #define INSTANTIATE_EXP(Real) template void cudaExp<Real>(Real*, Real*, size_t);
-INSTANTIATE_EXP(float);
-INSTANTIATE_EXP(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_EXP);
 
 #define INSTANTIATE_TANH(Real) template void cudaTanh<Real>(Real*, Real*, size_t);
-INSTANTIATE_TANH(float);
-INSTANTIATE_TANH(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_TANH);
 
 #define INSTANTIATE_TANHD(Real) template void cudaTanhD<Real>(Real*, Real*, size_t);
-INSTANTIATE_TANHD(float);
-INSTANTIATE_TANHD(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_TANHD);
 
 #define INSTANTIATE_SIGMOID(Real) template void cudaSigmoid<Real>(Real*, Real*, size_t);
-INSTANTIATE_SIGMOID(float);
-INSTANTIATE_SIGMOID(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_SIGMOID);
 
 #define INSTANTIATE_SIGMOIDD(Real) template void cudaSigmoidD<Real>(Real*, Real*, size_t);
-INSTANTIATE_SIGMOIDD(float);
-INSTANTIATE_SIGMOIDD(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_SIGMOIDD);
 
 #define INSTANTIATE_RELU(Real) template void cudaRELU<Real>(Real*, Real*, size_t);
-INSTANTIATE_RELU(float);
-INSTANTIATE_RELU(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_RELU);
 
 #define INSTANTIATE_RELUD(Real) template void cudaRELUD<Real>(Real*, Real*, size_t);
-INSTANTIATE_RELUD(float);
-INSTANTIATE_RELUD(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_RELUD);
 
 #define INSTANTIATE_SQRT(Real) template void cudaSqrt<Real>(Real*, Real*, size_t);
-INSTANTIATE_SQRT(float);
-INSTANTIATE_SQRT(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_SQRT);
 
 #define INSTANTIATE_SUM(Real) template void cudaSum<Real>(Real*, Real*, Real*, size_t);
-INSTANTIATE_SUM(float);
-INSTANTIATE_SUM(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_SUM);
 
 #define INSTANTIATE_SUB(Real) template void cudaSub<Real>(Real*, Real*, Real*, size_t);
-INSTANTIATE_SUB(float);
-INSTANTIATE_SUB(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_SUB);
 
 #define INSTANTIATE_ADD(Real) template void cudaAdd<Real>(Real*, Real*, Real*, size_t);
-INSTANTIATE_ADD(float);
-INSTANTIATE_ADD(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_ADD);
 
 #define INSTANTIATE_MULTELEMENTS(Real) template void cudaMultElements<Real>(Real*, Real*, Real*, size_t);
-INSTANTIATE_MULTELEMENTS(float);
-INSTANTIATE_MULTELEMENTS(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_MULTELEMENTS);
 
 #define INSTANTIATE_RAND(Real) template void cudaRandomize<Real>(Real*, size_t, unsigned long long);
-INSTANTIATE_RAND(float);
-INSTANTIATE_RAND(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_RAND);
 
 #define INSTANTIATE_FILL(Real) template void cudaFill<Real>(Real*, Real, size_t);
-INSTANTIATE_FILL(float);
-INSTANTIATE_FILL(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_FILL);
 
 #define INSTANTIATE_MULTSCALAR(Real) template void cudaMultScalar<Real>(Real*, Real*, Real*, size_t);
-INSTANTIATE_MULTSCALAR(float);
-INSTANTIATE_MULTSCALAR(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_MULTSCALAR);
 
 #define INSTANTIATE_AXPY(Real) template void cudaAXpY<Real>(Real*, Real*, Real*, Real*, size_t);
-INSTANTIATE_AXPY(float);
-INSTANTIATE_AXPY(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_AXPY);
 
 #define INSTANTIATE_DIVSCALAR(Real) template void cudaDivScalar<Real>(Real*, Real*, Real*, size_t);
-INSTANTIATE_DIVSCALAR(float);
-INSTANTIATE_DIVSCALAR(double);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_DIVSCALAR);
 

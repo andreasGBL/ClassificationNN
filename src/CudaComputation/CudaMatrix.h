@@ -1,25 +1,56 @@
 #pragma once
 #include "CudaMatrix.cuh"
+#include <string>
+#include <Templates.h>
 
 template<typename Real>
 class CudaVector;
+
+template<typename Real>
+class CudaMatrixRepr {
+public:
+	CudaMatrixRepr();
+	CudaMatrixRepr(size_t rows, size_t cols);
+	CudaMatrixRepr(Real * data, size_t rows, size_t cols);
+	~CudaMatrixRepr();
+
+	void init(Real * data, size_t rows, size_t cols);
+	void init(size_t rows, size_t cols);
+
+	CudaVector<Real> getColumn(size_t col) { return CudaVector<Real>(data + (rows * col), rows); }
+
+	void print();
+
+	Real * getData() { return data; }
+
+	size_t numCols() { return cols; }
+	size_t numRows() { return rows; }
+	size_t numElems() { return rows * cols; }
+
+	static void freeCublasHandle();
+	static cublasHandle_t handle;
+protected:
+	void initHandle();
+	Real * data;
+	size_t rows = 0, cols = 0;
+	bool ownership = true;
+	bool initialized = false;
+
+	bool checkDims(CudaMatrixRepr<Real> & B);
+	bool checkDims(CudaMatrixRepr<Real> & B, CudaMatrixRepr<Real> & C);
+	std::string toString(Real r);
+};
 
 /**
 Col_Major Cuda Matrix (Wrapper Class for cuBLAS)
 */
 template<typename Real>
-class CudaMatrix 
+class CudaMatrix : public CudaMatrixRepr<Real>
 {
 public:
 	CudaMatrix();
 	CudaMatrix(size_t rows, size_t cols);
-	CudaMatrix(Real* data, size_t rows, size_t cols);
-	~CudaMatrix();
-
-	void init(Real* data, size_t rows, size_t cols);
-	void init(size_t rows, size_t cols);
-
-	CudaVector<Real> getColumn(size_t col) { return CudaVector<Real>(data + (rows * col), rows); }
+	CudaMatrix(Real * data, size_t rows, size_t cols);
 	
 	void multElements(CudaMatrix<Real>& B, CudaMatrix<Real>& Result);
 	void add(CudaMatrix<Real>& B, CudaMatrix<Real>& Result);
@@ -38,30 +69,16 @@ public:
 	void tanhD(CudaMatrix<Real>& Result);
 	void sigmoid(CudaMatrix<Real>& Result);
 	void sigmoidD(CudaMatrix<Real>& Result);
+	/*template<typename out_t>
+	void applyFunc(CudaMatrixRepr<out_t> & Result, out_t (*func) (Real));*/
 	void RELU(CudaMatrix<Real>& Result);
 	void RELUD(CudaMatrix<Real>& Result);
 	void axpy(CudaMatrix<Real>& Y, CudaMatrix<Real>& Result, Real* Scalar);
-	void print();
 	CudaMatrix<Real> getSubmatrix(size_t firstCol, size_t lastCol);
 
 	void copyFrom(CudaMatrix<Real>& SRC);
 
-	Real* getData() { return data; }
-
-	size_t numCols() { return cols; }
-	size_t numRows() { return rows; }
-	size_t numElems() { return rows * cols; }
-	static void freeCublasHandle();
-	static cublasHandle_t handle;
 protected:
-	Real* data;
-	size_t rows = 0, cols = 0;
-	bool ownership = true;
-	bool initialized = false;
-	
-	void initHandle();
-	bool checkDims(CudaMatrix<Real>& B);
-	bool checkDims(CudaMatrix<Real>& B, CudaMatrix<Real>& C);
 	bool checkDimsMult(CudaMatrix<Real>& B, CudaMatrix<Real>& C, bool transA = false, bool transB = false);
 };
 /**
@@ -77,6 +94,9 @@ public:
 	CudaVector<Real> getSubvector(size_t firstElem, size_t lastElem);
 	void initVector(Real* data, size_t n);
 	void initVector(size_t n);
+	void init(Real * data, size_t rows, size_t cols) = delete;
+	void init(size_t rows, size_t cols) = delete;
+	CudaVector<Real> getColumn(size_t col) = delete;
 };
 
 template<typename Real>
@@ -120,27 +140,26 @@ void CudaVector<Real>::initVector(size_t n)
 }
 
 template<typename Real>
-cublasHandle_t CudaMatrix<Real>::handle = nullptr;
+cublasHandle_t CudaMatrixRepr<Real>::handle = nullptr;
 
 template<typename Real>
-CudaMatrix<Real>::CudaMatrix() :
-	CudaMatrix(0,0)
+CudaMatrixRepr<Real>::CudaMatrixRepr() :
+	CudaMatrixRepr(0,0)
 {
 }
 
+
+
 template<typename Real>
-CudaMatrix<Real>::CudaMatrix(size_t rows, size_t cols)
+CudaMatrixRepr<Real>::CudaMatrixRepr(size_t rows, size_t cols)
 {
 	init(rows, cols);
 }
-template<typename Real>
-CudaMatrix<Real>::CudaMatrix(Real* data, size_t rows, size_t cols)
-{
-	init(data, rows, cols);
-}
+
+
 
 template<typename Real>
-CudaMatrix<Real>::~CudaMatrix()
+CudaMatrixRepr<Real>::~CudaMatrixRepr()
 {
 	if (ownership && initialized) {
 		CUDACALL(cudaFree(data));
@@ -148,7 +167,7 @@ CudaMatrix<Real>::~CudaMatrix()
 }
 
 template<typename Real>
-void CudaMatrix<Real>::init(Real* data, size_t rows, size_t cols)
+void CudaMatrixRepr<Real>::init(Real* data, size_t rows, size_t cols)
 {
 	this->cols = cols;
 	this->rows = rows;
@@ -159,7 +178,7 @@ void CudaMatrix<Real>::init(Real* data, size_t rows, size_t cols)
 }
 
 template<typename Real>
-void CudaMatrix<Real>::init(size_t newRows, size_t newCols)
+void CudaMatrixRepr<Real>::init(size_t newRows, size_t newCols)
 {
 	cols = newCols;
 	rows = newRows;
@@ -170,6 +189,73 @@ void CudaMatrix<Real>::init(size_t newRows, size_t newCols)
 		initialized = true;
 	}
 	initHandle();
+}
+
+template<typename Real>
+std::string CudaMatrixRepr<Real>::toString(Real r)
+{
+	return std::to_string(r);
+}
+
+template<>
+std::string CudaMatrixRepr<float2>::toString(float2 r)
+{
+	return std::string("[" + std::to_string(r.x) + ", " + std::to_string(r.y) + "]");
+}
+
+template<>
+std::string CudaMatrixRepr<double2>::toString(double2 r)
+{
+	return std::string("[" + std::to_string(r.x) + ", " + std::to_string(r.y) + "]");
+}
+
+template<>
+std::string CudaMatrixRepr<double3>::toString(double3 r)
+{
+	return std::string("[" + std::to_string(r.x) + ", " + std::to_string(r.y) + ", " + std::to_string(r.z) + "]");
+}
+
+template<>
+std::string CudaMatrixRepr<float3>::toString(float3 r)
+{
+	return std::string("[" + std::to_string(r.x) + ", " + std::to_string(r.y) + ", " + std::to_string(r.z) + "]");
+}
+
+template<>
+std::string CudaMatrixRepr<double4>::toString(double4 r)
+{
+	return std::string("[" + std::to_string(r.x) + ", " + std::to_string(r.y) + ", " + std::to_string(r.z) + ", " + std::to_string(r.w) + "]");
+}
+
+template<>
+std::string CudaMatrixRepr<float4>::toString(float4 r)
+{
+	return std::string("[" + std::to_string(r.x) + ", " + std::to_string(r.y) + ", " + std::to_string(r.z) + ", " + std::to_string(r.w) + "]");
+}
+
+
+template<typename Real>
+CudaMatrixRepr<Real>::CudaMatrixRepr(Real * data, size_t rows, size_t cols)
+{
+	init(data, rows, cols);
+}
+
+template<typename Real>
+CudaMatrix<Real>::CudaMatrix() :
+	CudaMatrixRepr()
+{
+}
+
+template<typename Real>
+CudaMatrix<Real>::CudaMatrix(size_t rows, size_t cols) :
+	CudaMatrixRepr(rows, cols)
+{
+
+}
+template<typename Real>
+CudaMatrix<Real>::CudaMatrix(Real * data, size_t rows, size_t cols) :
+	CudaMatrixRepr(data, rows, cols)
+{
 }
 
 template<typename Real>
@@ -205,7 +291,7 @@ void CudaMatrix<Real>::sum(CudaMatrix<Real>& temp, Real* result)
 	bool ok = checkDims(temp);
 	assert(ok);
 	if (ok)
-		cudaSum<Real>(data, temp, result, (size_t)numElems());
+		cudaSum<Real>(data, temp.data, result, (size_t)numElems());
 }
 
 template<typename Real>
@@ -257,7 +343,12 @@ void CudaMatrix<Real>::randomize(unsigned long long seed)
 	cudaRandomize<Real>(data, (size_t)numElems(), seed);
 }
 template<typename Real>
-struct multImpl;
+struct multImpl {
+	static void apply(CudaMatrix<Real> & A, CudaMatrix<Real> & B, CudaMatrix<Real> & Result, bool transposeA, bool transposeB)
+	{
+		assert(false);
+	}
+};
 
 template<>
 struct multImpl<float> {
@@ -270,7 +361,7 @@ struct multImpl<float> {
 		int m = (int)Result.numRows();
 		int n = (int)Result.numCols();
 		int k = transposeA ? (int)A.numRows() : (int) A.numCols();
-		CUBLASCALL(cublasSgemm(CudaMatrix<float>::handle, ta, tb, m, n, k, &alpha, A.getData(), A.numRows(), B.getData(), B.numRows(), &beta, Result.getData(), Result.numRows()));
+		CUBLASCALL(cublasSgemm(CudaMatrixRepr<float>::handle, ta, tb, m, n, k, &alpha, A.getData(), A.numRows(), B.getData(), B.numRows(), &beta, Result.getData(), Result.numRows()));
 	}
 };
 template<>
@@ -284,7 +375,7 @@ struct multImpl<double> {
 		int m = (int)Result.numRows();
 		int n = (int)Result.numCols();
 		int k = transposeA ? (int)A.numRows() : (int)A.numCols();
-		CUBLASCALL(cublasDgemm(CudaMatrix<double>::handle, ta, tb, m, n, k, &alpha, A.getData(), A.numRows(), B.getData(), B.numRows(), &beta, Result.getData(), Result.numRows()));
+		CUBLASCALL(cublasDgemm(CudaMatrixRepr<double>::handle, ta, tb, m, n, k, &alpha, A.getData(), A.numRows(), B.getData(), B.numRows(), &beta, Result.getData(), Result.numRows()));
 	}
 };
 
@@ -385,13 +476,13 @@ void CudaMatrix<Real>::axpy(CudaMatrix<Real>& Y, CudaMatrix<Real>& Result, Real*
 }
 
 template<typename Real>
-void CudaMatrix<Real>::print()
+void CudaMatrixRepr<Real>::print()
 {
 	std::vector<Real> host(numElems());
 	deviceToHost<Real>(&host[0], data, numElems());
 	for (int row = 0; row < rows; row++) {
 		for (int col = 0; col < cols; col++) {
-			std::cout << host[row + col * rows]<<" ";
+			std::cout << toString(host[row + col * rows]).c_str()<<" ";
 		}
 		std::cout << std::endl;
 	}
@@ -417,29 +508,29 @@ void CudaMatrix<Real>::copyFrom(CudaMatrix<Real>& SRC)
 }
 
 template<typename Real>
-void CudaMatrix<Real>::freeCublasHandle()
+void CudaMatrixRepr<Real>::freeCublasHandle()
 {
-	if (CudaMatrix<Real>::handle) {
-		cublasDestroy_v2(CudaMatrix<Real>::handle);
-		CudaMatrix<Real>::handle = nullptr;
+	if (CudaMatrixRepr<Real>::handle) {
+		cublasDestroy_v2(CudaMatrixRepr<Real>::handle);
+		CudaMatrixRepr<Real>::handle = nullptr;
 	}
 
 }
 
 template<typename Real>
-void CudaMatrix<Real>::initHandle() {
-	if (!handle)
-		cublasCreate_v2(&handle);
+void CudaMatrixRepr<Real>::initHandle() {
+	if (!CudaMatrixRepr<Real>::handle)
+		cublasCreate_v2(&CudaMatrixRepr<Real>::handle);
 }
 
 template<typename Real>
-bool CudaMatrix<Real>::checkDims(CudaMatrix<Real>& B)
+bool CudaMatrixRepr<Real>::checkDims(CudaMatrixRepr<Real>& B)
 {
 	return rows <= B.rows && cols <= B.cols;
 }
 
 template<typename Real>
-bool CudaMatrix<Real>::checkDims(CudaMatrix<Real>& B, CudaMatrix<Real>& C)
+bool CudaMatrixRepr<Real>::checkDims(CudaMatrixRepr<Real>& B, CudaMatrixRepr<Real>& C)
 {
 	return checkDims(B) && checkDims(C);
 }
@@ -456,3 +547,24 @@ bool CudaMatrix<Real>::checkDimsMult(CudaMatrix<Real>& B, CudaMatrix<Real>& C, b
 	ok &= n == (transB ? B.rows : B.cols);
 	return ok;
 }
+
+//template<typename Real>
+//template<typename out_t>
+//void CudaMatrix<Real>::applyFunc(CudaMatrixRepr<out_t> & Result, out_t (*func) (Real))
+//{
+//	bool ok = numRows() <= Result.numRows() && numCols() <= Result.numCols();
+//	assert(ok);
+//	if (ok)
+//		cudaApplyFunc<Real, out_t>(data, Result.getData(), func, numElems());
+//}
+//
+//#define INSTANTIATE_APPLY_FUNC(Out_Type) template void CudaMatrix<float>::applyFunc(CudaMatrixRepr<Out_Type> &, Out_Type (*) (float)); template void CudaMatrix<double>::applyFunc(CudaMatrixRepr<Out_Type> &, Out_Type (*) (double)); template void CudaMatrix<half>::applyFunc(CudaMatrixRepr<Out_Type> &, Out_Type (*) (half)); 
+//EXECUTE_MACRO_FOR_ADVANCED_REAL_TYPES(INSTANTIATE_APPLY_FUNC);
+
+
+#define INSTANTIATE_CUDAMATRIX_REPR(Real) template class CudaMatrixRepr<Real>;
+#define INSTANTIATE_CUDAMATRIX(Real) template class CudaMatrix<Real>;
+#define INSTANTIATE_CUDAVECTOR(Real) template class CudaVector<Real>;
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_CUDAMATRIX);
+EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_CUDAVECTOR);
+EXECUTE_MACRO_FOR_ADVANCED_REAL_TYPES(INSTANTIATE_CUDAMATRIX_REPR);
