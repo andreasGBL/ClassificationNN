@@ -294,6 +294,7 @@ void cudaRELUD(Real* a, Real* result, size_t n) {
 }
 
 
+
 template<typename Real>
 void cudaSqrt(Real* a, Real* result, size_t n)
 {
@@ -302,7 +303,6 @@ void cudaSqrt(Real* a, Real* result, size_t n)
 	sqrtKernel<Real> << <GRIDSIZE, BLOCKSIZE >> > (a, result, n);
 	assert(CUDACALL(cudaGetLastError()));
 }
-
 
 #define INSTANTIATE_EXP(Real) template void cudaExp<Real>(Real*, Real*, size_t);
 EXECUTE_MACRO_FOR_REAL_TYPES(INSTANTIATE_EXP);

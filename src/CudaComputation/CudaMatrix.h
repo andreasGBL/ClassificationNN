@@ -69,8 +69,6 @@ public:
 	void tanhD(CudaMatrix<Real>& Result);
 	void sigmoid(CudaMatrix<Real>& Result);
 	void sigmoidD(CudaMatrix<Real>& Result);
-	/*template<typename out_t>
-	void applyFunc(CudaMatrixRepr<out_t> & Result, out_t (*func) (Real));*/
 	void RELU(CudaMatrix<Real>& Result);
 	void RELUD(CudaMatrix<Real>& Result);
 	void axpy(CudaMatrix<Real>& Y, CudaMatrix<Real>& Result, Real* Scalar);
@@ -547,20 +545,6 @@ bool CudaMatrix<Real>::checkDimsMult(CudaMatrix<Real>& B, CudaMatrix<Real>& C, b
 	ok &= n == (transB ? B.rows : B.cols);
 	return ok;
 }
-
-//template<typename Real>
-//template<typename out_t>
-//void CudaMatrix<Real>::applyFunc(CudaMatrixRepr<out_t> & Result, out_t (*func) (Real))
-//{
-//	bool ok = numRows() <= Result.numRows() && numCols() <= Result.numCols();
-//	assert(ok);
-//	if (ok)
-//		cudaApplyFunc<Real, out_t>(data, Result.getData(), func, numElems());
-//}
-//
-//#define INSTANTIATE_APPLY_FUNC(Out_Type) template void CudaMatrix<float>::applyFunc(CudaMatrixRepr<Out_Type> &, Out_Type (*) (float)); template void CudaMatrix<double>::applyFunc(CudaMatrixRepr<Out_Type> &, Out_Type (*) (double)); template void CudaMatrix<half>::applyFunc(CudaMatrixRepr<Out_Type> &, Out_Type (*) (half)); 
-//EXECUTE_MACRO_FOR_ADVANCED_REAL_TYPES(INSTANTIATE_APPLY_FUNC);
-
 
 #define INSTANTIATE_CUDAMATRIX_REPR(Real) template class CudaMatrixRepr<Real>;
 #define INSTANTIATE_CUDAMATRIX(Real) template class CudaMatrix<Real>;
